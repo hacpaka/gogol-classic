@@ -1,53 +1,71 @@
 package main
 
 import (
-	"log"
+	"hacpaka/gogol"
+	"math/rand"
 	"runtime"
 )
 
 const (
-	duration = 10
-	size = 20
-	width  =  1920
+	width = 1920
 	height = 1080
 )
+
+type Unit struct {
+	Life uint
+	Gain uint
+}
+
+func (u *Unit) Refresh() {
+	u.Life = u.Gain
+}
+
+type World struct {
+	units [][]*Unit
+}
+
+func (w *World) Init (columns, rows, population uint) {
+	w.units = make([][]*Unit, columns)
+
+	for x := range w.units {
+		w.units[x] = make([]*Unit, rows)
+
+		for y :=  range w.units[x] {
+			w.units[x][y] = &Unit{0, 0}
+		}
+	}
+
+	for population > 0 {
+		w.units[rand.Intn(int(columns))][rand.Intn(int(rows))].Gain = 1
+		population--
+	}
+}
 
 func main() {
 	runtime.LockOSThread()
 
-	columns := int(width / size)
-	rows := int(height / size)
+	world := new(World)
+	//world.Init()
 
-	units := Units(columns, rows, 1500)
-	log.Printf("World created: %vx%v", columns, rows)
-
-	action := func(prog uint32) error {
+	action := func(units [][]*gogol.Point) error {
 		for x := range units {
 			for y := range units[x] {
 				units[x][y].Refresh()
 
 				nb := units[x][y].Neighbors(units)
 
-				if units[x][y].life > 0 {
+				if units[x][y].Life > 0 {
 					if nb < 2 || nb > 3 {
-						units[x][y].gain = 0
+						units[x][y].Gain = 0
 					}
 
 					if nb == 2 || nb == 3 {
-						units[x][y].gain = 1
+						units[x][y].Gain = 1
 					}
 				}else {
 					if nb == 3 {
-						units[x][y].gain = 1
+						units[x][y].Gain = 1
 					}
-				}
-			}
-		}
-
-		for x := range units {
-			for y := range units[x] {
-				if units[x][y].life > 0 {
-					draw(prog, units[x][y].data, units[x][y].color)
 				}
 			}
 		}
@@ -55,7 +73,7 @@ func main() {
 		return nil
 	}
 
-	err := run(action, duration, width, height)
+	err := new(gogol.Engine).Init(action, width, height)
 	if err != nil {
 		panic(err)
 	}
